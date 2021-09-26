@@ -1,0 +1,415 @@
+﻿<html lang="en">
+<script type="text/javascript" class="__REQUESTLY__SCRIPT">
+    (function (namespace) {
+        window[namespace] = window[namespace] || {};
+        window[namespace].responseRules = {};
+
+        const isApplicableOnUrl = (url) =>
+            window[namespace].responseRules.hasOwnProperty(url);
+        const getResponseRule = (url) => window[namespace].responseRules[url];
+        const notifyRuleApplied = (rule) => {
+            window.postMessage(
+                {
+                    from: "requestly",
+                    type: "response_rule_applied",
+                    id: rule.id,
+                },
+                window.location.href
+            );
+        };
+
+        // Intercept XMLHttpRequest
+        const onReadyStateChange = function () {
+            if (this.readyState === 4 && isApplicableOnUrl(this.responseURL)) {
+                const responseRule = getResponseRule(this.responseURL);
+                const { response } = responseRule;
+                const responseType = this.responseType;
+                const customResponse =
+                    response.type === "code"
+                        ? responseRule.evaluator({
+                            method: this.method,
+                            url: this.responseURL,
+                            requestHeaders: this.requestHeaders,
+                            requestData: this.requestData,
+                            responseType: this.responseType,
+                            response: this.response,
+                        })
+                        : response.value;
+
+                Object.defineProperty(this, "response", {
+                    get: function () {
+                        if (response.type === "static" && responseType === "json") {
+                            return JSON.parse(customResponse);
+                        }
+                        return customResponse;
+                    },
+                });
+
+                if (responseType === "" || responseType === "text") {
+                    Object.defineProperty(this, "responseText", {
+                        get: function () {
+                            return customResponse;
+                        },
+                    });
+                }
+
+                notifyRuleApplied(responseRule);
+            }
+        };
+
+        const XHR = XMLHttpRequest;
+        XMLHttpRequest = function () {
+            const xhr = new XHR();
+            xhr.addEventListener(
+                "readystatechange",
+                onReadyStateChange.bind(xhr),
+                false
+            );
+            return xhr;
+        };
+        XMLHttpRequest.prototype = XHR.prototype;
+        Object.entries(XHR).map(([key, val]) => {
+            XMLHttpRequest[key] = val;
+        });
+
+        const open = XMLHttpRequest.prototype.open;
+        XMLHttpRequest.prototype.open = function (method) {
+            this.method = method;
+            open.apply(this, arguments);
+        };
+
+        const send = XMLHttpRequest.prototype.send;
+        XMLHttpRequest.prototype.send = function (data) {
+            this.requestData = data;
+            send.apply(this, arguments);
+        };
+
+        let setRequestHeader = XMLHttpRequest.prototype.setRequestHeader;
+        XMLHttpRequest.prototype.setRequestHeader = function (header, value) {
+            this.requestHeaders = this.requestHeaders || {};
+            this.requestHeaders[header] = value;
+            setRequestHeader.apply(this, arguments);
+        };
+
+        // Intercept fetch API
+        const _fetch = fetch;
+        fetch = async (resource, initOptions) => {
+            const url =
+                resource instanceof Request ? resource.url : resource.toString();
+            const fetchedResponse = await _fetch(resource, initOptions);
+
+            if (!isApplicableOnUrl(url)) {
+                return fetchedResponse;
+            }
+
+            let method, requestHeaders, requestData;
+
+            if (resource instanceof Request) {
+                const request = resource.clone();
+                method = request.method || "GET";
+                requestHeaders =
+                    request.headers &&
+                    Array.from(request.headers).reduce((obj, [key, val]) => {
+                        obj[key] = val;
+                        return obj;
+                    }, {});
+                requestData = await request.text();
+            } else {
+                method = initOptions.method || "GET";
+                if (initOptions.headers instanceof Headers) {
+                    requestHeaders = Array.from(initOptions.headers).reduce(
+                        (obj, [key, val]) => {
+                            obj[key] = val;
+                            return obj;
+                        },
+                        {}
+                    );
+                } else {
+                    requestHeaders = initOptions.headers;
+                }
+                requestData = initOptions.body;
+            }
+
+            const responseRule = getResponseRule(url);
+            const customResponseText =
+                responseRule.response.type === "code"
+                    ? responseRule.evaluator({
+                        method,
+                        url,
+                        requestHeaders,
+                        requestData,
+                        response: await fetchedResponse.text(),
+                    })
+                    : responseRule.response.value;
+
+            notifyRuleApplied(responseRule);
+
+            return new Response(new Blob([customResponseText]), {
+                status: fetchedResponse.status,
+                statusText: fetchedResponse.statusText,
+                headers: fetchedResponse.headers,
+            });
+        };
+    })('__REQUESTLY__')</script>
+<head>
+
+    <script>
+        window.console = window.console || function (t) { };
+    </script>
+
+    <script>
+        if (document.location.search.match(/type=embed/gi)) {
+            window.parent.postMessage("resize", "*");
+        }
+    </script>
+
+    <meta charset="UTF-8">
+
+    <link rel="apple-touch-icon" type="image/png" href="https://cpwebassets.codepen.io/assets/favicon/apple-touch-icon-5ae1a0698dcc2402e9712f7d01ed509a57814f994c660df9f7a952f3060705ee.png">
+    <meta name="apple-mobile-web-app-title" content="CodePen">
+
+
+    <title>Vancomycin TDM IDSA 2021</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/5.0.0/normalize.min.css">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.5.0/css/bootstrap.min.css">
+
+    <link rel="stylesheet" href="Vancostyle.css"
+
+</head>
+
+<body translate="no" data-new-gr-c-s-check-loaded="14.1028.0" data-gr-ext-installed="" style="font-family:sans-serif">
+    <div class="container mt-4">
+        <div class="row my-3">
+            <h2 style="text-align:center">Vancomycin initial dose IDSA 2021 BVTD</h2>
+        </div>
+    </div>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="row-heading">
+                Input data
+            </div>
+            <div class="col-3 row-heading">
+                Value
+            </div>
+
+        </div>
+
+        <div class="row my-3">
+            <div class="col-6">
+                Giới tính
+            </div>
+            <div class="col-6">
+                <input type="radio" name="gender" value="Nam" class="button" id="Male"> Nam
+                <input type="radio" name="gender" value="Nữ" class="button" id="Female"> Nữ
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-6">
+                Tuổi
+            </div>
+            <div class="col-3">
+                <input type="number" value="0" class="qty" id="qty_age">
+            </div>
+        </div>
+
+        <div class="row my-3">
+            <div class="col-6">
+                Chiều cao (cm)
+            </div>
+            <div class="col-3">
+                <input type="number" value="0" class="qty" id="qty_height">
+            </div>
+        </div>
+
+        <div class="row my-3">
+            <div class="col-6">
+                Cân nặng (kg)
+            </div>
+            <div class="col-3">
+                <input type="number" class="qty" value="0" id="qty_weight">
+            </div>
+        </div>
+
+        <div class="row my-3">
+            <div class="col-6">
+                Creatinine (mcg/mL)
+            </div>
+            <div class="col-3">
+                <input type="number" class="qty" value="0" id="qty_creatinine">
+            </div>
+        </div>
+
+        <div class="row my-3">
+            <div class="col-6">
+                AUC mục tiêu (khoảng khuyến cáo: 400-600)
+            </div>
+            <div class="col-3">
+                <input type="number" class="qty_aucg" value="500" id="qty_aucg">
+            </div>
+        </div>
+
+        <div class="row my-3">
+            <div class="col-6">
+                Có sử dụng liều tải hay không?
+            </div>
+            <div class="col-6">
+                <input type="radio" name="loadingdose" class="button" value="Có" id="lieutai"> Có
+                <input type="radio" name="loadingdose" class="button" value="Không" id="khongtai"> Không
+            </div>
+        </div>
+
+        <div class="row my-3">
+            <div class="col-6">
+                Liều tải (khuyến cáo 20-25, để trống nếu không sử dụng liều tải)
+            </div>
+            <div class="col-3">
+                <input type="number" class="qty" value="0" id="qty_lieutai">
+            </div>
+        </div>
+
+        <div class="row my-3">
+            <div class="col-6">
+                Người bệnh có béo phì hay không?
+            </div>
+            <div class="col-6">
+                <input type="radio" name="obese" class="button" value="Có" id="beophi"> Có
+                <input type="radio" name="obese" class="button" value="Không" id="khongbeophi"> Không
+            </div>
+        </div>
+
+        <div class="btncontainer">
+            <button id="btn" onclick="calculateTotal()">Calculate</button>
+        </div>
+
+        <div class="row">
+            <div class="row-heading">
+                Process Data
+            </div>
+            <div class="col-3 row-heading">
+                Value
+            </div>
+        </div>
+
+        <div class="row my-3">
+            <div class="col-6">
+                Ideal body weight (kg) (sử dụng TBW nếu TBW < IBW)
+            </div>
+            <div class="col-3">
+                <span id="qty_ibw">0</span>
+            </div>
+        </div>
+
+        <div class="row my-3">
+            <div class="col-6">
+                Creatinine clearance (ml/phút)
+            </div>
+            <div class="col-3">
+                <span id="qty_CrCl">0</span>
+            </div>
+        </div>
+
+        <div class="row my-3">
+            <div class="col-6">
+                Vancomycin clearance (L/giờ)
+            </div>
+            <div class="col-3">
+                <span id="qty_clvanco">0</span>
+            </div>
+        </div>
+
+        <div class="row my-3">
+            <div class="col-6">
+                Thể tích phân bố (L)
+            </div>
+            <div class="col-3">
+                <span id="qty_vd">0</span>
+            </div>
+        </div>
+
+        <div class="row my-3">
+            <div class="col-6">
+                Ke
+            </div>
+            <div class="col-3">
+                <span id="qty_ke">0</span>
+            </div>
+        </div>
+
+        <div class="row my-3">
+            <div class="col-6">
+                t1/2 (giờ)
+            </div>
+            <div class="col-3">
+                <span id="qty_t12">0</span>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-6 row-heading">
+                Output data
+            </div>
+        </div>
+        
+            <table>
+                <tr>
+                    <td colspan="2">Tổng liều mỗi ngày (mg/24 giờ)</td>
+                    <td colspan="3"><span id="qty_tl" style="font-size:1.3rem">0</span></td>
+                </tr>
+                <tr>
+                    <th></th>
+                    <th>Liều (mg)</th>
+                    <th>Thời gian truyền (giờ)</th>
+                    <th>Khoảng cách liều (giờ)</th>
+                    <th>AUC 24 giờ ước tính</th>                   
+                </tr>
+                <tr>
+                </tr>
+                <tr>
+                    <td>Liều tải</td>
+                    <td><span id="qty_lt">0</span></td>
+                    <td><span id="qty_tgt">0</span></td>                    
+                </tr>
+                <tr>
+                <tr>
+                    <td>Chế độ liều 1</td>
+                    <td><span id="qty_lieu1">0</span></td>
+                    <td><span id="qty_tgt1">0</span></td>
+                    <td><span id="qty_kcl1">0</span></td>
+                    <td><span id="qty_auc1">0</span></td>                    
+                </tr>
+                <tr>
+                    <td>Chế độ liều 2</td>
+                    <td><span id="qty_lieu2">0</span></td>
+                    <td><span id="qty_tgt2">0</span></td>t
+                    <td><span id="qty_kcl2">0</span></td>
+                    <td><span id="qty_auc2">0</span></td>                  
+                </tr>
+                <tr>
+                    <td>Chế độ liều 3</td>
+                    <td><span id="qty_lieu3">0</span></td>
+                    <td><span id="qty_tgt3">0</span></td>
+                    <td><span id="qty_kcl3">0</span></td>
+                    <td><span id="qty_auc3">0</span></td>                    
+                </tr>
+                <tr>
+                    <td>Chế độ liều 4</td>
+                    <td><span id="qty_lieu4">0</span></td>
+                    <td><span id="qty_tgt4">0</span></td>
+                    <td><span id="qty_kcl4">0</span></td>
+                    <td><span id="qty_auc4">0</span></td>                    
+                </tr>
+            </table>
+        </div>
+        <div class="btncontainer" style="font-weight:bold; font-size:15px;" id="demo"></div>
+
+
+        <script src="https://cpwebassets.codepen.io/assets/common/stopExecutionOnTimeout-1b93190375e9ccc259df3a57c1abc0e64599724ae30d7ea4c6877eb615f89387.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+        <script src="vancoini1.js"></script>
+    </div>
+</body>
+</html>
